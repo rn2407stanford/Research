@@ -1,0 +1,115 @@
+---
+title: "Heterogen_graphs"
+output: html_document
+date: '2022-04-22'
+---
+
+
+```{r}
+library(readxl)
+library(writexl)
+library(dplyr)
+library(tidyr)
+library(igraph)
+library(reshape)
+library(ggplot2)
+```
+
+
+```{r}
+Heterog<-read_excel("HeterogeneityIndeces.xlsx", sheet = "Math6")
+
+ggplot(Heterog, aes(x=SchoolName, y= WeightedMat )) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 45)) + labs( x="School Name", y= "Distance Matrice Index")
+
+
+ggplot(Heterog, aes(x=SchoolName, y= WeightedGiniSimpson )) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 45)) + labs( x="School Name", y= "Gini-Simpson Index") + geom_abline(intercept= range(Heterog$WeightedGiniSimpson)/2, slope=0)
+
+ggplot(Heterog, aes(x=SchoolName, y= Quotient )) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 45)) + labs( x="School Name", y= "Entropy")
+
+ggplot(Heterog, aes(x=SchoolName, y= Quotient )) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 45)) + labs( x="School Name", y= "Entropy")
+
+```
+
+
+```{r}
+GS<-read_excel("GS.xlsx", sheet = "Math7")
+
+ggplot(GS, aes(x=GS_School, y= GSindex )) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 45)) + labs( x="School Name", y= "Gini-Simpson Index") + scale_x_continuous(breaks = c(GS1$GS_School), label= c(GS1$SchoolName))
+
+ggplot(GS, aes(x=GS_School, y= GSindex)) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) + labs( x="Gini-Simpson Index for Schools", y= "Gini-Simpson Index for Math 7") + scale_x_continuous(breaks = c(GS1$GS_School), label= c(GS1$SchoolName)) + geom_point(alpha=4, size=0.1) +  geom_abline(intercept= -0.3, slope=1.47)
+
+ggplot(GS, aes(x=GS_Grade, y= GSindex)) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) + labs( x="Gini-Simpson Index for Schools", y= "Gini-Simpson Index for Math 6") + scale_x_continuous(breaks = c(GS1$GS_Grade), label= c(GS1$SG1)) + geom_point(alpha=4, size=0.1) +  geom_abline(intercept= -0.3, slope=1.41)
+
+```
+school variable factor
+scale_y_continuous(labels=c(1,2,3))
+
+theme(plot.title=element_text(size=20, face="bold", family="American Typewriter", color="tomato", hjust=0.5, lineheight=1.2)
+
+
+
+```{r}
+Entropy<-read_excel("Entropy.xlsx", sheet = "Math8")
+
+ggplot(Entropy, aes(x=Ent_School, y= Entropy)) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) + labs( x="Entropy for Schools", y= "Entropy for Math 8") + scale_x_continuous(breaks = c(Entropy$Ent_School), label= c(Entropy$SchoolName)) + geom_point(alpha=4, size=0.1) +  geom_abline(intercept= -0.35, slope=1.47)
+
+```
+
+```{r}
+Matrices<-read_excel("Matrices.xlsx", sheet = "Math8")
+
+ggplot(Matrices, aes(x=Mat_Grade, y= Mat_Course)) +geom_point() + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) + labs( x="Distance Matrices for Schools", y= "Distance Matrices for Math 8") + scale_x_continuous(breaks = c(Matrices$Mat_Grade), label= c(Matrices$SchoolName)) + geom_point(alpha=4, size=0.1) +  geom_abline(intercept= -2.1, slope=2.01)
+```
+GS1617<-select(GS1617, SchoolName, GS_School, GS_Course)
+GS1617$GS_School<-scale(GS1617$GS_School)
+GS1617$GS_Course<-scale(GS1617$GS_Course)
+
+geom_abline(intercept=0, slope=1)
+
+scale_x_continuous(breaks = c(GS1617$GS_School)) label= c(GS1617$SchoolName)
+
+```{r}
+GS1617<-read_excel("GS1920.xlsx", sheet = "ELA8")
+
+ggplot(GS1617, aes(x=GS_School, y= GS_Course)) +geom_point(aes(colour=SchoolName)) + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) +xlim(0,1) +ylim(0,1) + labs( x="Gini-Simpson Index for Schools", y= "Gini-Simpson Index for ELA 8") + scale_colour_manual(values = c("pink", "blue", "green", "yellow", "black", "purple", "red", "orange")) + theme_classic() + geom_hline(yintercept = c(mean(GS1617$GS_Course), mean(GS1617$GS_Course)+sd(GS1617$GS_Course), mean(GS1617$GS_Course)-sd(GS1617$GS_Course)), color=c("darkgray"), linetype=c("dashed", "dotted", "dotted")) + geom_vline(xintercept=c(mean(GS1617$GS_School), mean(GS1617$GS_School)+sd(GS1617$GS_School), mean(GS1617$GS_School)-sd(GS1617$GS_School)), color=c("darkgray"), linetype=c("dashed", "dotted", "dotted"  ))
+
+```
+
+"Clifford Elementary School", "Garfield Elementary School", "Hoover Elementary School", "Kennedy Middle School", "McKinley Middle School", "North Star Academy", "Roosevelt Elementary School", "Roy Cloud Elementary School"
+ALL<-filter(ALL, Year=="2019-2020")
+Clifford<-filter(ALL, GradeLevel=="7")
+Clifford<-filter(Clifford, Grade=="8")
+
+```{r}
+Clifford<-read_excel("ALL.xlsx", sheet = "ACC")
+Clifford<-filter(Clifford, SchoolName=="Kennedy Middle School")
+m<-round(mean(Clifford$GS_Course), 2)
+sd<-round(sd(Clifford$GS_Course), 2)
+a<-filter(Clifford, Clifford$GS_Course >0.5)
+one<-filter(a, a$GS_School > 0.5)
+two<-filter(a, a$GS_School< 0.5)
+b<-filter(Clifford, Clifford$GS_Course <= 0.5)
+three<-filter(b, b$GS_School< 0.5)
+four<-filter(b, b$GS_School> 0.5)
+q1<-round(nrow(one)/nrow(Clifford)*100)
+q2<-round(nrow(two)/nrow(Clifford)*100)
+q3<-round(nrow(three)/nrow(Clifford)*100)
+q4<-round(nrow(four)/nrow(Clifford)*100)
+r<-data.frame(m, sd, q1, q2, q3, q4)
+r
+```
+
+
+theme(legend.position = "none")
+ALL<-filter(ALL, Year=="2019-2020")
+ALL<-filter(ALL, Grade=="8")
+```{r}
+ALL<-read_excel("ALL.xlsx", sheet = "Enr")
+ggplot(ALL, aes(x=GS_School, y= GS_Course)) +geom_point(aes(colour=SchoolName)) + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust=0.5)) +xlim(0,1) +ylim(0,1) + labs( x="Gini-Simpson Index for Schools", y= "Gini-Simpson Index for Social Studies") + scale_colour_manual(breaks=c("Clifford Elementary School", "Garfield Elementary School", "Hoover Elementary School", "Kennedy Middle School", "McKinley Middle School", "North Star Academy", "Roosevelt Elementary School", "Roy Cloud Elementary School"), values = c("pink", "blue", "green", "yellow", "black", "purple", "red", "orange")) + theme_test() +geom_hline(yintercept = c(0.5))+ geom_vline(xintercept=c(0.5)) 
+```      
+
+
+```{r}
+geom_hline(yintercept = c(mean(ALL$GS_Course), mean(ALL$GS_Course)+sd(ALL$GS_Course), mean(ALL$GS_Course)-sd(ALL$GS_Course)), color=c("darkgray"), linetype=c("dashed", "dotted", "dotted")) + geom_vline(xintercept=c(mean(ALL$GS_School), mean(ALL$GS_School)+sd(ALL$GS_School), mean(ALL$GS_School)-sd(ALL$GS_School)), color=c("darkgray"), linetype=c("dashed", "dotted", "dotted"  ))
+?theme_
+```
