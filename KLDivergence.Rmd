@@ -1,0 +1,271 @@
+---
+title: "KLDivergence"
+output: html_document
+---
+
+
+```{r}
+library(readxl)
+library(writexl)
+library(dplyr)
+library(tidyr)
+library(igraph)
+library(reshape)
+DF<-read_excel("KLDivergence.xlsx", sheet = "CourseSec")
+
+```
+
+
+```{r}
+DF0<-DF[DF$SchoolName=="Clifford Elementary School",]
+DF0<-DF0[DF0$GradeLevel==6,]
+# DF0$CourseName<-paste(DF0$CourseName, DF0$SectionID)
+DF1<-select(DF0, SectionID)
+DF1$SectionID2<-DF1$SectionID
+DF1$N<-as.numeric(1)
+
+#make Afill data
+DF1<-DF1 %>% pivot_wider(names_from = SectionID, values_from = N, values_fill = 0) # list(col_name = function_name)
+
+DF1<-as.matrix(DF1)
+DF2<-as.matrix(DF1[,-c(1)])
+rownames(DF2)=DF1[,1]
+edge<-melt(DF2)
+DF3<-filter(edge, edge$value==0 )
+```
+```{r}
+DF4<-select(DF0, SectionID, P1, P2, P3, P4 )
+library(dplyr)
+colnames(DF4)[which(names(DF4) == "SectionID")] <- "X1"
+library(plyr)
+plyr1 <- join(DF3, DF4, by = "X1")
+
+DF5<-DF4
+colnames(DF5)[which(names(DF5) == "P1")] <- "Q1"
+colnames(DF5)[which(names(DF5) == "P2")] <- "Q2"
+colnames(DF5)[which(names(DF5) == "P3")] <- "Q3"
+colnames(DF5)[which(names(DF5) == "P4")] <- "Q4"
+colnames(DF5)[which(names(DF5) == "X1")] <- "X2"
+
+Dta <- join(plyr1, DF5, by = "X2")
+
+```
+
+
+KL Divergence Forward
+
+```{r}
+
+Dta$KL_PQ<-Dta$P1*log(Dta$P1/Dta$Q1)+Dta$P2*log(Dta$P2/Dta$Q2) + Dta$P3*log(Dta$P3/Dta$Q3) + Dta$P4*log(Dta$P4/Dta$Q4)
+
+
+Dta$KL_QP<-Dta$Q1*log(Dta$Q1/Dta$P1)+Dta$Q2*log(Dta$Q2/Dta$P2) + Dta$Q3*log(Dta$Q3/Dta$P3) + Dta$Q4*log(Dta$Q4/Dta$P4)
+
+```
+
+
+```{r}
+Dta$JS<-0.5*(Dta$P1*log(Dta$P1/0.5*(Dta$P1+Dta$Q1))+Dta$P2*log(Dta$P2/0.5*(Dta$P2+Dta$Q2)) + Dta$P3*log(Dta$P3/0.5*(Dta$P3+Dta$Q3)) + Dta$P4*log(Dta$P4/0.5*(Dta$P4+Dta$Q4)) +Dta$Q1*log(Dta$Q1/0.5*(Dta$P1+Dta$Q1))+Dta$Q2*log(Dta$Q2/0.5*(Dta$P2+ Dta$Q2)) + Dta$Q3*log(Dta$Q3/0.5*(Dta$P3+Dta$Q3)) + Dta$Q4*log(Dta$Q4/0.5*(Dta$P4+Dta$Q4)))
+
+
+```
+
+
+```{r}
+Dta$JS1<-0
+m<-nrow(Dta)
+p<-select(Dta, P1, P2, P3, P4)
+q<-select(Dta, Q1, Q2, Q3, Q4)
+n <- 0.5 * (p + q)
+
+for (i in 1:m){
+  Dta$JS1[i] <- 0.5 * (sum(p[i,] * log(p[i,] / n[i,])) + sum(q[i,] * log(q[i,] / n[i,])))
+}
+```
+
+```{r}
+Dta2<-read_excel("KLDivergence.xlsx", sheet = "Tot")
+Dta2[is.na(Dta2)] <- 0
+Dta2$Tot<-Dta2$LTEL+Dta2$STEL+Dta2$RFEP+Dta2$'Not-EL'
+Dta2<-Dta2[Dta2$SchoolName=="Clifford Elementary School",]
+Dta2<-Dta2[Dta2$GradeLevel==6,]
+Dta2$pa1<-Dta2$LTEL/Dta2$Tot
+Dta2$pa2<-Dta2$STEL/Dta2$Tot
+Dta2$pa3<-Dta2$RFEP/Dta2$Tot
+Dta2$pa4<-Dta2$'Not-EL'/Dta2$Tot
+Dta1<-DF0
+Dta1[is.na(Dta1)] <- 0
+Dta1$pa1<-Dta2$pa1
+Dta1$pa2<-Dta2$pa2
+Dta1$pa3<-Dta2$pa3
+Dta1$pa4<-Dta2$pa4
+```
+
+
+```{r}
+Dta1$a<-Dta1$P1*log(Dta1$P1/0.5*(Dta1$P1+Dta1$pa1))
+Dta1$a[is.na(Dta1$a)] <- 0
+Dta1$b<-Dta1$P2*log(Dta1$P2/0.5*(Dta1$P2+Dta1$pa2))
+Dta1$b[is.na(Dta1$b)] <- 0
+Dta1$c<-Dta1$P3*log(Dta1$P3/0.5*(Dta1$P3+Dta1$pa3))
+Dta1$c[is.na(Dta1$c)] <- 0
+Dta1$d<-Dta1$P4*log(Dta1$P4/0.5*(Dta1$P4+Dta1$pa4))
+Dta1$d[is.na(Dta1$d)] <- 0
+Dta1$e<-Dta1$pa1*log(Dta1$pa1/0.5*(Dta1$P1+Dta1$pa1))
+Dta1$f<-Dta1$pa2*log(Dta1$pa2/0.5*(Dta1$P2+Dta1$pa2))
+Dta1$g<-Dta1$pa3*log(Dta1$pa3/0.5*(Dta1$P3+Dta1$pa3))
+Dta1$e<-Dta1$pa4*log(Dta1$pa4/0.5*(Dta1$P4+Dta1$pa4))
+
+Dta1$JK<-0.5*(Dta1$a+Dta1$b+Dta1$c+Dta1$d+Dta1$e+Dta1$f+Dta1$g+Dta1$e)
+```
+
+
+```{r}
+lookup<-select(attrib, StudentNumber, Status)
+library(plyr)
+rename(edge$Var1)=1
+plyr1 <- join(edge$Var1 , lookup, by = "HouseType")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+0.5*log((0.5/1), base=2)
+# 0.5*log((0.5/0), base=2)
+log(1/0.5, base=2)
+```
+
+
+
+
+
+
+
+
+
+
+https://www.rdocumentation.org/packages/FNN/versions/1.1.3/topics/KL.divergence
+
+```{r}
+p<-c(0.5, 0.5)
+q<-c(0.6, 0.4)
+
+library(philentropy)
+x<-rbind(p,q)
+KL(x, unit = "log2")
+```
+https://search.r-project.org/CRAN/refmans/LaplacesDemon/html/KLD.html
+ 
+```{r}
+library(LaplacesDemon)
+KLD(p,q, base=2)
+```
+
+https://rug.mnhn.fr/seewave/HTML/MAN/kl.dist.html
+
+```{r}
+library(seewave)
+kl.dist(p, q)
+```
+
+
+```{r}
+p<-c(0.06451613, 0.03225806, 0.2580645, 0.6451613)
+q<-c(0.06250000, 0.06250000, 0.2500000, 0.6250000)
+
+y<-rbind(p,q)
+
+KLDme <- function(p,q) sum(p * log(p/q))
+KLDme(p,q)
+
+JSD(y, unit = "log2") # Default
+JSD1<- function(x,y) sqrt(0.5 * KLDme(x, (x+y)/2) + 0.5 * KLDme(y, (x+y)/2))
+JSD1(p,q)
+
+n <- 0.5 * (p + q)
+JS <- 0.5 * (sum(p * log(p / n)) + sum(q * log(q / n)))
+JS
+```
+
+
+
+```{r}
+# KL (discrete) function, p and q should have a log flag as 2nd parameter
+KL_dsc = function(p, q){
+  f = function(x) p(x)*(p(x, T)-q(x, T))
+  l = 0:2^20 # big enough, but not too much to blow my memory
+  sum(f(l))
+}
+
+KL_dsc(k, q)
+k = function(x, lg=F) dpois(x, 1, log=lg)
+k
+```
+
+
+
+
+
+```{r}
+P <- 1:10/sum(1:10)
+Q <- 20:29/sum(20:29)
+x <- rbind(P,Q)
+
+KL(x, unit = "log2") # Default
+KL(x, unit = "log")
+KL(x, unit = "log10")
+kl.dist(P, Q)
+
+```
+
+```{r}
+KLD(P,Q, base=2)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

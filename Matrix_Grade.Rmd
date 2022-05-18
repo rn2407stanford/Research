@@ -1,0 +1,138 @@
+---
+title: "Matrix_Grade"
+output: html_document
+---
+
+```{r}
+library("readxl")
+library("writexl")
+library("plyr")
+library("dplyr")
+library("tidyr")
+library("igraph")
+setwd("C:/Users/Roza/Desktop")
+d1920<-read_excel("Size.xlsx", sheet = "Woutclass")
+```
+
+
+# Start
+
+```{r}
+d19<-filter(d1920, d1920$GradeLevel==8 ) 
+d19$StudentNumber2<-d19$StudentNumber
+Network<-filter(d19, d19$SchoolName=="Roy Cloud Elementary School" )
+```
+
+"Clifford Elementary School", "Garfield Elementary School", "Hoover Elementary School", "Kennedy Middle School" "McKinley Middle School", "North Star Academy", "Roosevelt Elementary School", "Roy Cloud Elementary School"
+
+```{r}
+# Network$ankap="_"
+# Network$CourseSec<- paste(Network$CourseName, Network$ankap, Network$djbaxt)
+Network <- Network[order(Network$StudentNumber2),]
+# Create Network form
+Net19 <- select(Network, StudentNumber2, StudentNumber)
+Net19$N<-1
+Net19<-Net19 %>%
+  pivot_wider(names_from = StudentNumber, values_from = N, values_fill = 0) # list(col_name = function_name)
+# Create Affil Variable
+affil19<-as.matrix(Net19[,-c(1)])
+Net19<-as.matrix(Net19)
+rownames(affil19)=Net19[,1]
+#Make attrib variable
+Net_19n<-data.frame(Net19)
+Net_attrib19 <-select(d19, StudentNumber2, StudentNumber, SchoolName, GradeLevel, Status)
+length(which(duplicated(Net_attrib19)))
+Net_dup19<-Net_attrib19[!duplicated(Net_attrib19),]
+Net_wdf19<-Net_19n %>% select(StudentNumber2)
+attrib19<-merge(Net_wdf19, Net_dup19, by="StudentNumber2")
+affil<-affil19
+attrib<-attrib19
+transpose_affil<-t(affil)
+sts<- affil %*% transpose_affil
+library(reshape2)
+edge1<-melt(sts)
+edge<-edge1
+```
+
+
+
+```{r}
+colnames(edge)[which(names(edge) == "Var1")] <- "StudentNumber"
+m<-nrow(edge)
+lookup<-select(attrib, StudentNumber, Status  )
+plyr1 <- join(edge, lookup, by = "StudentNumber")
+colnames(plyr1)[which(names(plyr1) == "Var2")] <- "StudentNumber2"
+colnames(lookup)[which(names(lookup) == "StudentNumber2")] <- "StudentNumber2"
+colnames(lookup)[which(names(lookup) == "Status")] <- "Status1"
+colnames(lookup)[which(names(lookup) == "StudentNumber")] <- "StudentNumber2"
+plyr2 <- join(plyr1, lookup, by = "StudentNumber2")
+plyr4<-plyr2
+```
+
+
+
+```{r}
+library(tidyr)
+# plyr3<-extract(plyr2, djbaxt, c("djb1", "baxt1"), "([^ ]+.*) (.*)")
+# plyr4<-extract(plyr3, djbaxt2, c("djb2", "baxt2"), "([^ ]+.*) (.*)")
+n<-nrow(plyr4)
+plyr4$Dis<-0
+#for (i in 1:n){
+#   if (plyr4$djb1[i]==plyr4$djb2[i]) {plyr4$Dis[i]=1}
+# }
+# plyr5<-filter(plyr4, plyr4$Dis==1)
+plyr5<-plyr4
+plyr5<-na.omit(plyr5)
+```
+
+
+```{r}
+k<-nrow(plyr5)
+for (i in 1:k){
+  if (plyr5$Status[i]=="LTEL" & plyr5$Status1[i]=="LTEL") {plyr5$Dis[i]=1}
+  else if (plyr5$Status[i]=="LTEL" & plyr5$Status1[i]=="STEL") {plyr5$Dis[i]=2}
+  else if (plyr5$Status[i]=="LTEL" & plyr5$Status1[i]=="RFEP") {plyr5$Dis[i]=3}  
+  else if (plyr5$Status[i]=="LTEL" & plyr5$Status1[i]=="Not-EL") {plyr5$Dis[i]=4}
+  
+  else if (plyr5$Status[i]=="STEL" & plyr5$Status1[i]=="LTEL") {plyr5$Dis[i]=2}
+  else if (plyr5$Status[i]=="STEL" & plyr5$Status1[i]=="STEL") {plyr5$Dis[i]=1}
+  else if (plyr5$Status[i]=="STEL" & plyr5$Status1[i]=="RFEP") {plyr5$Dis[i]=2}
+  else if (plyr5$Status[i]=="STEL" & plyr5$Status1[i]=="Not-EL") {plyr5$Dis[i]=3}
+  
+  else if (plyr5$Status[i]=="RFEP" & plyr5$Status1[i]=="LTEL") {plyr5$Dis[i]=3}
+  else if (plyr5$Status[i]=="RFEP" & plyr5$Status1[i]=="STEL") {plyr5$Dis[i]=2}
+  else if (plyr5$Status[i]=="RFEP" & plyr5$Status1[i]=="RFEP") {plyr5$Dis[i]=1}
+  else if (plyr5$Status[i]=="RFEP" & plyr5$Status1[i]=="Not-EL") {plyr5$Dis[i]=2}
+  
+  else if (plyr5$Status[i]=="Not-EL" & plyr5$Status1[i]=="LTEL") {plyr5$Dis[i]=4}
+  else if (plyr5$Status[i]=="Not-EL" & plyr5$Status1[i]=="STEL") {plyr5$Dis[i]=3}
+  else if (plyr5$Status[i]=="Not-EL" & plyr5$Status1[i]=="RFEP") {plyr5$Dis[i]=2}
+  else if (plyr5$Status[i]=="Not-EL" & plyr5$Status1[i]=="Not-EL") {plyr5$Dis[i]=1}
+  else {plyr5$Dis[i]=0}
+}
+
+for (i in 1:k){
+  if (plyr5$StudentNumber[i]==plyr5$StudentNumber2[i]) {plyr5$Dis[i]=0}
+}
+
+```
+
+
+```{r}
+attrib1<-select(attrib, StudentNumber, SchoolName, GradeLevel)
+attrib1<-unique(attrib1)
+# colnames(attrib1)[which(names(attrib1) == "StudentNumber")] <- "baxt2"
+plyr6 <- join(plyr5, attrib1, by = "StudentNumber")
+# write_xlsx(plyr6, "C:/Users/Roza/Desktop/Cliffordmean.xlsx")
+sum<-sum(plyr6$Dis)
+sum
+```
+# END
+
+```{r}
+```
+
+
+
+
+
