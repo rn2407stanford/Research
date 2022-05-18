@@ -1,0 +1,246 @@
+---
+title: "Classroom Matrices"
+output: html_document
+---
+
+```{r}
+library("readxl")
+library("writexl")
+library("plyr")
+library("dplyr")
+library("tidyr")
+library("igraph")
+setwd("C:/Users/Roza/Desktop")
+d1920<-read_excel("Hsiaolin.xlsx", sheet = "2018-2019")
+```
+
+# Start
+
+```{r}
+d19<-filter(d1920, d1920$Term=="T3")
+d19<-filter(d19, d19$Term=="T3")
+d19<-filter(d19, d19$GradeLevel==6 ) 
+d19$SectionID<-paste(d19$SectionID, d19$GradeLevel)
+Network<-filter(d19, d19$SchoolName=="NorthStar" )
+sort(unique(d19$SchoolName ))
+```
+
+"Clifford Elementary School", "Garfield Elementary School", "Hoover Elementary School", "Kennedy Middle School" "McKinley Middle School", "North Star Academy", "Roosevelt Elementary School", "Roy Cloud Elementary School"
+
+```{r}
+d19$djbaxt<-paste( d19$SectionID, d19$StudentNumber)
+Network$djbaxt<-paste( Network$SectionID, Network$StudentNumber)
+```
+
+
+```{r}
+# Network$ankap="_"
+# Network$CourseSec<- paste(Network$CourseName, Network$ankap, Network$djbaxt)
+Network <- Network[order(Network$djbaxt),]
+# Create Network form
+Net19 <-Network %>% select(djbaxt, SectionID)
+Net19$N<-1
+Net19<-Net19 %>%
+  pivot_wider(names_from = SectionID, values_from = N, values_fill = 0) # list(col_name = function_name)
+# Create Affil Variable
+affil19<-as.matrix(Net19[,-c(1)])
+Net19<-as.matrix(Net19)
+rownames(affil19)=Net19[,1]
+#Make attrib variable
+Net_19n<-data.frame(Net19)
+Net_attrib19 <-select(d19, djbaxt, StudentNumber, AcademicYear, SchoolName, GradeLevel, Status)
+length(which(duplicated(Net_attrib19)))
+Net_dup19<-Net_attrib19[!duplicated(Net_attrib19),]
+Net_wdf19<-Net_19n %>% select(djbaxt)
+attrib19<-merge(Net_wdf19, Net_dup19, by="djbaxt")
+affil<-affil19
+attrib<-attrib19
+transpose_affil<-t(affil)
+sts<- affil %*% transpose_affil
+library(reshape2)
+edge1<-melt(sts)
+edge<-edge1
+
+```
+
+```{r}
+colnames(edge)[which(names(edge) == "Var1")] <- "djbaxt"
+m<-nrow(edge)
+lookup<-select(attrib, djbaxt, Status  )
+plyr1 <- join(edge, lookup, by = "djbaxt")
+colnames(plyr1)[which(names(plyr1) == "Var2")] <- "djbaxt2"
+colnames(lookup)[which(names(lookup) == "djbaxt2")] <- "djbaxt2"
+colnames(lookup)[which(names(lookup) == "Status")] <- "Status1"
+colnames(lookup)[which(names(lookup) == "djbaxt")] <- "djbaxt2"
+plyr2 <- join(plyr1, lookup, by = "djbaxt2")
+```
+
+```{r}
+library(tidyr)
+plyr3<-extract(plyr2, djbaxt, c("djb1", "baxt1"), "([^ ]+.*) (.*)")
+plyr4<-extract(plyr3, djbaxt2, c("djb2", "baxt2"), "([^ ]+.*) (.*)")
+
+n<-nrow(plyr4)
+plyr4$Dis<-0
+#for (i in 1:n){
+#   if (plyr4$djb1[i]==plyr4$djb2[i]) {plyr4$Dis[i]=1}
+# }
+
+# plyr5<-filter(plyr4, plyr4$Dis==1)
+plyr5<-plyr4
+plyr5<-na.omit(plyr5)
+
+```
+
+```{r}
+k<-nrow(plyr5)
+df1<-filter(plyr5, Status=="LTEL")
+LTELLTEL<-filter(df1, Status1=="LTEL")
+LTELLTEL$Dis=1
+LTELSTEL<-filter(df1, Status1=="STEL")
+LTELSTEL$Dis=2
+LTELRFEP<-filter(df1, Status1=="RFEP")
+LTELRFEP$Dis=3
+LTELNotEL<-filter(df1, Status1=="Not-EL")
+LTELNotEL$Dis=4
+
+df2<-filter(plyr5, Status=="STEL")
+STELLTEL<-filter(df2, Status1=="LTEL")
+STELLTEL$Dis=2
+STELSTEL<-filter(df2, Status1=="STEL")
+STELSTEL$Dis=1
+STELRFEP<-filter(df2, Status1=="RFEP")
+STELRFEP$Dis=2
+STELNotEL<-filter(df2, Status1=="Not-EL")
+STELNotEL$Dis=3
+
+df3<-filter(plyr5, Status=="RFEP")
+RFEPLTEL<-filter(df3, Status1=="LTEL")
+RFEPLTEL$Dis=3
+RFEPSTEL<-filter(df3, Status1=="STEL")
+RFEPSTEL$Dis=2
+RFEPRFEP<-filter(df3, Status1=="RFEP")
+RFEPRFEP$Dis=1
+RFEPNotEL<-filter(df3, Status1=="Not-EL")
+RFEPNotEL$Dis=2
+
+df4<-filter(plyr5, Status=="Not-EL")
+NotELLTEL<-filter(df4, Status1=="LTEL")
+NotELLTEL$Dis=4
+NotELSTEL<-filter(df4, Status1=="STEL")
+# NotELSTEL$Dis=3
+NotELRFEP<-filter(df4, Status1=="RFEP")
+NotELRFEP$Dis=2
+NotELNotEL<-filter(df4, Status1=="Not-EL")
+NotELNotEL$Dis=1
+
+plyr5<-rbind(LTELLTEL, LTELSTEL, LTELRFEP, LTELNotEL, STELLTEL, STELSTEL, STELRFEP, STELNotEL, RFEPLTEL, RFEPSTEL, RFEPRFEP, RFEPNotEL, NotELLTEL, NotELSTEL, NotELRFEP, NotELNotEL)
+
+for (i in 1:k){
+  if (plyr5$baxt1[i]==plyr5$baxt2[i]) {plyr5$Dis[i]=0}
+}
+```
+
+
+# Taxem Qe
+
+```{r}
+attrib1<-select(attrib, StudentNumber, AcademicYear, SchoolName, GradeLevel)
+attrib1<-unique(attrib1)
+colnames(attrib1)[which(names(attrib1) == "StudentNumber")] <- "baxt2"
+plyr6 <- join(plyr5, attrib1, by = "baxt2")
+
+write.csv(plyr6, "C:/Users/Roza/Desktop/NorthStar6.csv")
+sum<-sum(plyr6$Dis)
+sum
+```
+
+
+
+```{r}
+setwd("C:/Users/Roza/Desktop/schools")
+Clifford<-read_excel("Clifford.xlsx", sheet = "Dis")
+Garfield<-read_excel("Garfield.xlsx", sheet = "Dis")
+Hoover<-read_excel("Hoover.xlsx", sheet = "Dis")
+Kennedy6<-read_excel("Kennedy6.xlsx", sheet = "Dis")
+Kennedy7<-read_excel("Kennedy7.xlsx", sheet = "Dis")
+Kennedy8<-read_excel("Kennedy8.xlsx", sheet = "Dis")
+Mckinley<-read_excel("Mckinley.xlsx", sheet = "Dis")
+NorthStar<-read_excel("NorthStar.xlsx", sheet = "Dis")
+Roosevelt<-read_excel("Roosevelt.xlsx", sheet = "Dis")
+RoyCloud<-read_excel("RoyCloud.xlsx", sheet = "Dis")
+AllSchools<-rbind(Clifford, Garfield, Hoover, Kennedy6, Kennedy7, Kennedy8, Mckinley, NorthStar, Roosevelt, RoyCloud)
+Distance<-AllSchools[!(AllSchools$GradeLevel=="(blank)"),]
+colnames(Distance)[which(names(Distance) == "djb2")] <- "SectionID"
+Distance$Section<-Distance$SectionID
+Distance$Xary<-paste(Distance$GradeLevel, Distance$SectionID, Distance$SchoolName)
+Size<-read_excel("C:/Users/Roza/Desktop/Size.xlsx", sheet = "Size")
+Size<-Size[!(Size$GradeLevel=="(blank)"),]
+Size$SectionID<- paste(Size$SectionID, Size$GradeLevel)
+Size$Xary<-paste(Size$GradeLevel, Size$SectionID, Size$SchoolName)
+Size1<-select(Size, SectionID, CourseName, Size, Xary)
+SizeGrade<-read_excel("C:/Users/Roza/Desktop/Size.xlsx", sheet = "SizeGrade")
+Finaldf <- join(Distance, Size1, by = "Xary")
+Finaldf$New<- Finaldf$'Grand Total'/(Finaldf$Size)^2
+Finaldf$eshutyun<-paste(Finaldf$SchoolName, Finaldf$GradeLevel)
+SizeGrade$eshutyun<-paste(SizeGrade$SchoolName, SizeGrade$GradeLevel)
+SizeGrade1<-select(SizeGrade,eshutyun, DGQuotient2, DGQuotient)
+Finaldf <- join(Finaldf, SizeGrade1, by = "eshutyun")
+Finaldf$WeightedMat<- Finaldf$New/Finaldf$DGQuotient2
+write_xlsx(Finaldf, "C:/Users/Roza/Desktop/AllSchools.xlsx")
+
+Finaldta<- select(Finaldf, SchoolName, GradeLevel, CourseName, Section, "Grand Total", Size, New, DGQuotient2, WeightedMat)
+
+colnames(Finaldta)[which(names(Finaldta) == "GradeLevel")] <- "Grade"
+colnames(Finaldta)[which(names(Finaldta) == "Grand Total")] <- "CourseSumMatrix"
+colnames(Finaldta)[which(names(Finaldta) == "Size")] <- "CourseSize"
+colnames(Finaldta)[which(names(Finaldta) == "New")] <- "SumMatbySize"
+colnames(Finaldta)[which(names(Finaldta) == "DGQuotient2")] <- "GradeSumMatrix"
+colnames(Finaldta)[which(names(Finaldta) == "WeightedMat")] <- "FinalWeightedMatrix"
+```
+
+```{r}
+Simpson<-read_excel("C:/Users/Roza/Desktop/Index4groups.xlsx", sheet = "Course Section Level")
+Entropy<-read_excel("C:/Users/Roza/Desktop/Entropy.xlsx", sheet = "Allcourses")
+JS<-read_excel("C:/Users/Roza/Desktop/Schools.xlsx")
+Simpson$of<-paste(Simpson$GradeLevel, Simpson$SectionID, Simpson$GradeLevel, Simpson$SchoolName)
+Entropy$of<-paste(Entropy$GradeLevel, Entropy$SectionID, Entropy$GradeLevel, Entropy$SchoolName)
+Finaldf$of<-paste(Finaldf$GradeLevel, Finaldf$SectionID, Finaldf$SchoolName)
+JS$of<-paste( JS$GradeLevel, JS$SectionID, JS$GradeLevel, JS$SchoolName )
+
+sh<-select(Simpson, of, WeightedSchoolandGrade, "Gini-Simpson’s index")
+shent<-select(Entropy, of, Enthropy, Quotient)
+JSK<-select(JS, JK, of)
+
+ply <- join(Finaldf, sh, by = "of")
+ply1 <- join(ply, shent, by = "of")
+ply1 <- join(ply1, JSK, by = "of")
+
+ply1$JKSize<- ply1$JK/ply1$Size
+
+cor(ply1$WeightedSchoolandGrade, ply1$WeightedMat) # Matrix vs Gini-Simpson
+cor(ply1$New, ply1$"Gini-Simpson’s index") # Matrix vs Gini-Simpson
+cor(ply1$WeightedMat, ply1$Quotient) # Matrix vs Entropy
+cor(ply1$WeightedSchoolandGrade, ply1$Quotient) # Entropy vs Simpson
+cor(ply1$"Gini-Simpson’s index", ply1$JK) # 
+cor(ply1$WeightedSchoolandGrade, ply1$JKSize) # 
+
+write_xlsx(ply1, "C:/Users/Roza/Desktop/HeterogeneityIndeces.xlsx")
+
+```
+
+
+
+
+
+
+
+
+
+
+Distance<-filter(AllSchools, GradeLevel==(6, 7, 8))
+
+
+write_xlsx(plyr6, "C:/Users/Roza/Desktop/McKinley.xlsx")
+setwd("C:/Users/Roza/Desktop")
+View(df)
